@@ -2,10 +2,10 @@ import { AccountStatus } from "../enums/enums";
 import Customer from "./customer";
 
 export default abstract class Account {
-  protected accountNumber: string;
-  protected balance: number;
-  protected owner: Customer;
-  protected status: AccountStatus;
+   accountNumber: string;
+   balance: number;
+   owner: Customer;
+   status: AccountStatus;
   constructor(
     accountNumber: string,
     balance: number,
