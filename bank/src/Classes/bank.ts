@@ -2,11 +2,11 @@ import Account from "./account";
 import Customer from "./customer";
 
 export class Bank {
-  static instance: Bank;
-  customers: Map<string, Customer>;
-  accounts: Map<string, Account>;
+  private static instance: Bank;
+  private customers: Map<string, Customer>;
+  private accounts: Map<string, Account>;
 
-  constructor() {
+  private constructor() {
     this.customers = new Map();
     this.accounts = new Map();
   }
@@ -20,6 +20,10 @@ export class Bank {
 
   registerCustomer(customer: Customer): void {
     this.customers.set(customer.id, customer);
+  }
+
+  registerAccount(account: Account): void {
+    this.accounts.set(account.accountNumber, account);
   }
 
   findAccount(accountNumber: string): Account {
