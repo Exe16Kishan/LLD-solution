@@ -1,198 +1,805 @@
-# Strategy Design Pattern — Payment Service (Complete Guide)
+# Chain of Responsibility Pattern — TypeScript
 
-A production-style implementation of the **Strategy Design Pattern** using a Payment Service example (UPI + Debit Card), with validation, async handling, and transaction history.
+## 1. What is Chain of Responsibility?
+
+The **Chain of Responsibility (CoR)** pattern passes a request through a sequence of handlers.
+
+Each handler decides:
+
+1. **Can I handle this request?**
+2. If yes → handle it.
+3. If no → pass it to the next handler.
+
+```mermaid
+flowchart TD
+    A[Client] --> B[Handler 1]
+    B -->|Can handle?| C{Yes / No}
+    C -->|Yes| D[Handle Request]
+    C -->|No| E[Handler 2]
+    E -->|Can handle?| F{Yes / No}
+    F -->|Yes| G[Handle Request]
+    F -->|No| H[Handler 3]
+    H -->|Can handle?| I{Yes / No}
+    I -->|Yes| J[Handle Request]
+    I -->|No| K[Request Unhandled]
+```
+
+The important idea is:
+
+> The client sends the request to the **chain**, not directly to the object that will handle it.
 
 ---
 
-## 📌 What Problem Does This Solve?
+# 2. Basic Structure
 
-Without Strategy pattern, payment code usually ends up like this:
+A typical Chain of Responsibility implementation has these components:
 
-```typescript
-function pay(type: string, amount: number) {
-  if (type === "upi") {
-    // upi logic
-  } else if (type === "debit") {
-    // debit logic
-  } else if (type === "credit") {
-    // credit logic
-  }
-  // adding a new payment method = editing this function again ❌
+```text
+Client
+  │
+  ▼
+Handler Interface
+  │
+  ├── ConcreteHandler A
+  ├── ConcreteHandler B
+  └── ConcreteHandler C
+```
+
+### Required components
+
+| Component                        | Required? | Purpose                             |
+| -------------------------------- | --------- | ----------------------------------- |
+| Handler interface/abstract class | ✅         | Defines the common handler contract |
+| `handle()` method                | ✅         | Processes or forwards the request   |
+| Concrete handlers                | ✅         | Contain actual handling logic       |
+| Next-handler reference           | Usually ✅ | Connects handlers together          |
+| Client                           | ✅         | Starts the request                  |
+
+### Optional components
+
+| Component                      | Optional? | Purpose                              |
+| ------------------------------ | --------- | ------------------------------------ |
+| `setNext()`                    | Usually   | Allows dynamic chain construction    |
+| Abstract base handler          | Optional  | Avoids repeating chain logic         |
+| `canHandle()`                  | Optional  | Separates decision from handling     |
+| Default/fallback handler       | Optional  | Handles requests nobody else handles |
+| Result/response                | Optional  | Returns information to the client    |
+| `next` as constructor argument | Optional  | Builds immutable-ish chains          |
+
+---
+
+# 3. Core Handler Interface
+
+The simplest TypeScript structure:
+
+```ts
+interface Handler {
+    setNext(handler: Handler): Handler;
+    handle(request: Request): void;
 }
 ```
 
-This violates the **Open/Closed Principle** (code should be open for extension, closed for modification). Strategy pattern fixes this by moving each payment method into its own interchangeable class.
+There are two important methods here:
 
----
+### `setNext()`
 
-## 🏗️ Architecture Diagram
+Connects one handler to another.
 
-```mermaid
-classDiagram
-    class PaymentStrategy {
-        <<interface>>
-        +validate() boolean
-        +pay(amount: number) Promise~PaymentResult~
-    }
-
-    class Upi {
-        -upiId: string
-        -upiRegex: RegExp
-        +validate() boolean
-        +pay(amount: number) Promise~PaymentResult~
-    }
-
-    class DebitCard {
-        -cardNumber: string
-        -cvv: string
-        -expiry: string
-        -DAILY_LIMIT: number
-        +validate() boolean
-        +pay(amount: number) Promise~PaymentResult~
-        -checkExpiry() boolean
-    }
-
-    class PaymentInit {
-        -paymentStrategy: PaymentStrategy
-        -history: PaymentResult[]
-        +changeStrategy(strategy: PaymentStrategy) void
-        +execute(amount: number) Promise~PaymentResult~
-        +getHistory() PaymentResult[]
-    }
-
-    class PaymentResult {
-        <<interface>>
-        +success: boolean
-        +transactionId: string
-        +message: string
-        +timestamp: Date
-    }
-
-    PaymentStrategy <|.. Upi : implements
-    PaymentStrategy <|.. DebitCard : implements
-    PaymentInit o-- PaymentStrategy : holds a reference to
-    PaymentInit ..> PaymentResult : produces
+```ts
+handlerA.setNext(handlerB);
 ```
 
-**Kaise padhna hai ye diagram:**
-- `<|..` (dashed arrow with hollow triangle) = "implements" — `Upi` aur `DebitCard` `PaymentStrategy` interface ka contract follow karte hain
-- `o--` (hollow diamond) = "composition/has-a" — `PaymentInit` ek `PaymentStrategy` ko apne andar hold karta hai
-- `..>` (dashed arrow) = "depends on / produces" — `PaymentInit` ka output `PaymentResult` type ka hota hai
+### `handle()`
 
----
+Attempts to process the request.
 
-## 🔄 Runtime Flow Diagram
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Context as PaymentInit (Context)
-    participant Strategy as Upi / DebitCard (Strategy)
-
-    Client->>Context: new PaymentInit(new Upi(...))
-    Client->>Context: execute(400)
-    Context->>Strategy: pay(400)
-    Strategy->>Strategy: validate()
-    alt validation fails
-        Strategy-->>Context: PaymentResult { success: false }
-    else validation passes
-        Strategy->>Strategy: simulate gateway call
-        Strategy-->>Context: PaymentResult { success: true, transactionId }
-    end
-    Context->>Context: push result to history
-    Context-->>Client: return PaymentResult
-
-    Client->>Context: changeStrategy(new DebitCard(...))
-    Client->>Context: execute(1500)
-    Context->>Strategy: pay(1500)
-    Note over Context,Strategy: Same execute() call,<br/>different strategy object —<br/>this is the core power of the pattern
+```ts
+handlerA.handle(request);
 ```
 
 ---
 
-## 🧩 Main Components (Table)
+# 4. Request
 
-| Component | Role | Analogy |
-|---|---|---|
-| `PaymentStrategy` (interface) | Contract jo har payment method ko follow karna hai | Menu card — sirf naam batata hai, khana nahi banata |
-| `Upi`, `DebitCard` (concrete classes) | Actual payment logic, validation, gateway simulation | Chef jo apne tarike se dish banata hai |
-| `PaymentInit` (context) | Strategy ko hold karta hai, execution delegate karta hai, history maintain karta hai | Waiter — order leta hai, kitchen (strategy) ko bhejta hai, result serve karta hai |
-| `PaymentResult` (interface) | Structured output — success, transactionId, message, timestamp | Bill/Receipt jo customer ko milta hai |
-| `generateTransactionId()` (helper) | Har payment ke liye unique traceable ID | Order number |
+The request contains the information that handlers need to make their decision.
+
+For example:
+
+```ts
+interface Request {
+    amount: number;
+}
+```
+
+You could have something more complex:
+
+```ts
+interface Request {
+    amount: number;
+    type: string;
+    priority: number;
+}
+```
+
+The request itself is **not technically a required CoR class**.
+
+It can simply be:
+
+```ts
+handle(request: string)
+```
+
+or:
+
+```ts
+handle(request: SomeType)
+```
+
+The important thing is that handlers receive the same type of request.
 
 ---
 
-## 📂 Suggested Folder Structure (Real Project Mein)
+# 5. Concrete Handler
 
+A concrete handler contains the actual business logic.
+
+```ts
+class Level1Handler implements Handler {
+
+    private nextHandler?: Handler;
+
+    setNext(handler: Handler): Handler {
+        this.nextHandler = handler;
+        return handler;
+    }
+
+    handle(request: Request): void {
+
+        if (request.amount <= 1000) {
+            console.log("Level 1 handled the request");
+            return;
+        }
+
+        this.nextHandler?.handle(request);
+    }
+}
 ```
-payment-service/
-├── strategies/
-│   ├── PaymentStrategy.ts      → interface
-│   ├── Upi.ts                  → concrete strategy
-│   └── DebitCard.ts            → concrete strategy
-├── context/
-│   └── PaymentInit.ts          → context class
-├── factory/
-│   └── PaymentFactory.ts       → optional: object creation logic
-├── types/
-│   └── PaymentResult.ts        → shared types
-└── index.ts                    → client code
+
+Notice the important flow:
+
+```text
+Can I handle it?
+      │
+   ┌──┴──┐
+  YES    NO
+   │      │
+   ▼      ▼
+Handle   nextHandler
 ```
 
 ---
 
-## ⚙️ How Data Flows (Arguments)
+# 6. Multiple Handlers
+
+Let's create three handlers.
+
+```ts
+class Level1Handler implements Handler {
+
+    private nextHandler?: Handler;
+
+    setNext(handler: Handler): Handler {
+        this.nextHandler = handler;
+        return handler;
+    }
+
+    handle(request: Request): void {
+
+        if (request.amount <= 1000) {
+            console.log("Level 1 handled");
+            return;
+        }
+
+        this.nextHandler?.handle(request);
+    }
+}
+```
+
+```ts
+class Level2Handler implements Handler {
+
+    private nextHandler?: Handler;
+
+    setNext(handler: Handler): Handler {
+        this.nextHandler = handler;
+        return handler;
+    }
+
+    handle(request: Request): void {
+
+        if (request.amount <= 10000) {
+            console.log("Level 2 handled");
+            return;
+        }
+
+        this.nextHandler?.handle(request);
+    }
+}
+```
+
+```ts
+class ManagerHandler implements Handler {
+
+    private nextHandler?: Handler;
+
+    setNext(handler: Handler): Handler {
+        this.nextHandler = handler;
+        return handler;
+    }
+
+    handle(request: Request): void {
+
+        console.log("Manager handled");
+    }
+}
+```
+
+---
+
+# 7. Building the Chain
+
+Now the client creates the chain.
+
+```ts
+const level1 = new Level1Handler();
+const level2 = new Level2Handler();
+const manager = new ManagerHandler();
+
+level1
+    .setNext(level2)
+    .setNext(manager);
+```
+
+This creates:
 
 ```mermaid
 flowchart LR
-    A["Client passes setup args<br/>(upiId / cardNumber+cvv+expiry)"] --> B["new Upi(...) / new DebitCard(...)"]
-    B --> C["new PaymentInit(strategyObject)"]
-    C --> D["payment.execute(amount)"]
-    D --> E["strategy.pay(amount)"]
-    E --> F["PaymentResult returned"]
-    F --> G["Context pushes result to history"]
+    A[Level 1] --> B[Level 2]
+    B --> C[Manager]
 ```
 
-Do tarah ke arguments yaad rakho:
+Then:
 
-| Type | Kab pass hota hai | Example |
-|---|---|---|
-| Setup/Identity args | Object banate waqt, constructor mein | `upiId`, `cardNumber`, `cvv` |
-| Runtime/Action args | Actual kaam karte waqt, method call mein | `amount` in `execute(amount)` |
+```ts
+level1.handle({ amount: 500 });
+```
+
+Flow:
+
+```text
+Client
+  │
+  ▼
+Level 1
+  │
+  └── handles it
+```
+
+For:
+
+```ts
+level1.handle({ amount: 5000 });
+```
+
+Flow becomes:
+
+```text
+Client
+  │
+  ▼
+Level 1
+  │
+  │ cannot handle
+  ▼
+Level 2
+  │
+  └── handles it
+```
+
+For:
+
+```ts
+level1.handle({ amount: 50000 });
+```
+
+```text
+Client
+  │
+  ▼
+Level 1
+  │
+  ▼
+Level 2
+  │
+  ▼
+Manager
+  │
+  └── handles it
+```
 
 ---
 
-## ✅ When To Use This Pattern
+# 8. Complete Minimal Implementation
 
-- Multiple algorithms/methods ek hi kaam ke liye (payment, sorting, discount, shipping cost)
-- `if-else`/`switch` chain type check karne ke liye badh rahi ho
-- Runtime pe behavior switch karna ho (user payment method change kare)
+This is probably the most useful structure to remember.
 
-## ❌ When NOT To Use
+```ts
+interface Request {
+    amount: number;
+}
 
-- Sirf ek hi tareeka hai kaam karne ka (over-engineering hoga)
-- Strategies kabhi change nahi hongi aur future mein bhi nayi add hone ka chance nahi
+interface Handler {
+    setNext(handler: Handler): Handler;
+    handle(request: Request): void;
+}
+
+class HandlerA implements Handler {
+
+    private nextHandler?: Handler;
+
+    setNext(handler: Handler): Handler {
+        this.nextHandler = handler;
+        return handler;
+    }
+
+    handle(request: Request): void {
+
+        if (/* can handle */) {
+            // handle request
+            return;
+        }
+
+        this.nextHandler?.handle(request);
+    }
+}
+
+class HandlerB implements Handler {
+
+    private nextHandler?: Handler;
+
+    setNext(handler: Handler): Handler {
+        this.nextHandler = handler;
+        return handler;
+    }
+
+    handle(request: Request): void {
+
+        if (/* can handle */) {
+            // handle request
+            return;
+        }
+
+        this.nextHandler?.handle(request);
+    }
+}
+
+class HandlerC implements Handler {
+
+    private nextHandler?: Handler;
+
+    setNext(handler: Handler): Handler {
+        this.nextHandler = handler;
+        return handler;
+    }
+
+    handle(request: Request): void {
+
+        if (/* can handle */) {
+            // handle request
+            return;
+        }
+
+        // No next handler
+    }
+}
+```
+
+Client:
+
+```ts
+const handlerA = new HandlerA();
+const handlerB = new HandlerB();
+const handlerC = new HandlerC();
+
+handlerA
+    .setNext(handlerB)
+    .setNext(handlerC);
+
+handlerA.handle(request);
+```
 
 ---
 
-## 🍒 Extra Tips (Cherry on the Cake)
+# 9. The Abstract Base Handler
 
-1. **Result object return karo, sirf boolean nahi** — production mein transactionId, message, timestamp sab chahiye hote hain logging/debugging/refund ke liye.
-2. **Async by default socho** — real payment gateway calls kabhi synchronous nahi hoti.
-3. **Validation ko separate method rakho** (`validate()`) — `pay()` ke andar hi mat ghusao, isse testing aasan hoti hai.
-4. **Sensitive data mask karo** logs mein (`**** **** **** 1234`) — security best practice.
-5. **Factory pattern combine karo** jab strategies 4-5 se zyada ho jaye — object creation client se hide ho jayega.
-6. **Golden rule:** *"Interface decides WHAT, concrete class decides HOW, context decides WHEN, client decides WHICH."*
-7. **SOLID connection:** Ye pattern Open/Closed Principle ka textbook example hai — naya payment method add karna ho toh sirf ek naya class banao, purana code touch nahi karna padta.
+When you have many handlers, you'll notice that this code is repeated:
+
+```ts
+private nextHandler?: Handler;
+
+setNext(handler: Handler): Handler {
+    this.nextHandler = handler;
+    return handler;
+}
+```
+
+That's where an **abstract base handler** can help.
+
+```ts
+abstract class BaseHandler implements Handler {
+
+    protected nextHandler?: Handler;
+
+    setNext(handler: Handler): Handler {
+        this.nextHandler = handler;
+        return handler;
+    }
+
+    abstract handle(request: Request): void;
+}
+```
+
+Now concrete handlers only need to worry about their business logic:
+
+```ts
+class Level1Handler extends BaseHandler {
+
+    handle(request: Request): void {
+
+        if (request.amount <= 1000) {
+            console.log("Level 1 handled");
+            return;
+        }
+
+        this.nextHandler?.handle(request);
+    }
+}
+```
+
+```ts
+class Level2Handler extends BaseHandler {
+
+    handle(request: Request): void {
+
+        if (request.amount <= 10000) {
+            console.log("Level 2 handled");
+            return;
+        }
+
+        this.nextHandler?.handle(request);
+    }
+}
+```
+
+This is often a **cleaner production structure**.
 
 ---
 
-## 🔍 Self-Check Before Calling It Production-Ready
+# 10. Better Structure: `canHandle()` + `handle()`
 
-- [ ] Interface mein sirf method signatures hain, koi implementation logic nahi
-- [ ] Har concrete strategy apna `validate()` khud handle karti hai
-- [ ] Context kisi concrete class ka naam directly nahi jaanta (sirf interface pe depend karta hai)
-- [ ] `changeStrategy()` jaisa method hai jo runtime switching allow kare
-- [ ] Result object mein enough info hai debugging/audit ke liye (id, timestamp, message)
-- [ ] Sensitive data properly typed aur masked hai
-- [ ] Naya strategy add karne ke liye purana code modify nahi karna pad raha (Open/Closed Principle)
+Another useful design is to separate:
+
+> **"Can I handle this?"**
+
+from:
+
+> **"How do I handle it?"**
+
+For example:
+
+```ts
+abstract class BaseHandler {
+
+    protected nextHandler?: BaseHandler;
+
+    setNext(handler: BaseHandler): BaseHandler {
+        this.nextHandler = handler;
+        return handler;
+    }
+
+    handle(request: Request): void {
+
+        if (this.canHandle(request)) {
+            this.process(request);
+            return;
+        }
+
+        this.nextHandler?.handle(request);
+    }
+
+    protected abstract canHandle(request: Request): boolean;
+
+    protected abstract process(request: Request): void;
+}
+```
+
+Then:
+
+```ts
+class Level1Handler extends BaseHandler {
+
+    protected canHandle(request: Request): boolean {
+        return request.amount <= 1000;
+    }
+
+    protected process(request: Request): void {
+        console.log("Level 1 processed request");
+    }
+}
+```
+
+This gives you:
+
+```mermaid
+flowchart TD
+    A[Request] --> B[Handler]
+    B --> C{canHandle?}
+    C -->|Yes| D[process]
+    C -->|No| E[nextHandler]
+    E --> F[Next Handler]
+    F --> G{canHandle?}
+    G -->|Yes| H[process]
+    G -->|No| I[nextHandler]
+```
+
+This structure is especially useful when all handlers follow the same pattern.
+
+---
+
+# 11. Important: Who Builds the Chain?
+
+Usually **the client/composition root** builds the chain.
+
+```ts
+const auth = new AuthHandler();
+const validation = new ValidationHandler();
+const rateLimit = new RateLimitHandler();
+const controller = new ControllerHandler();
+
+auth
+    .setNext(validation)
+    .setNext(rateLimit)
+    .setNext(controller);
+```
+
+Then:
+
+```ts
+auth.handle(request);
+```
+
+The client doesn't need to know which handler eventually handles it.
+
+```mermaid
+flowchart LR
+    A[Client] --> B[Auth]
+    B --> C[Validation]
+    C --> D[Rate Limit]
+    D --> E[Controller]
+```
+
+---
+
+# 12. Important Rule: The Chain Does NOT Have to Stop
+
+This is an important variation.
+
+### Stop after handling
+
+```ts
+if (this.canHandle(request)) {
+    this.process(request);
+    return;
+}
+
+this.nextHandler?.handle(request);
+```
+
+Flow:
+
+```text
+A → B → C
+    ↑
+    B handles
+    STOP
+```
+
+This is common when **only one handler should handle the request**.
+
+---
+
+### Continue after handling
+
+You could instead do:
+
+```ts
+if (this.canHandle(request)) {
+    this.process(request);
+}
+
+this.nextHandler?.handle(request);
+```
+
+Now:
+
+```text
+A → B → C
+    ↓   ↓
+  handles
+      ↓
+    continues
+```
+
+This is useful when **multiple handlers can process the same request**.
+
+For example:
+
+```text
+Request
+   ↓
+Authentication
+   ↓
+Logging
+   ↓
+Validation
+   ↓
+Caching
+   ↓
+Controller
+```
+
+Here, you often want **all** relevant handlers to execute.
+
+---
+
+# 13. Two Common Forms of CoR
+
+### Form 1 — One handler handles
+
+```mermaid
+flowchart LR
+    R[Request] --> A[Handler A]
+    A -->|Can't handle| B[Handler B]
+    B -->|Can't handle| C[Handler C]
+    C -->|Handles| D[STOP]
+```
+
+Use when:
+
+> "Find the first object capable of handling this."
+
+Examples:
+
+* Support escalation
+* Approval levels
+* Exception handling
+* Discount rules
+* Authorization levels
+
+---
+
+### Form 2 — Multiple handlers process
+
+```mermaid
+flowchart LR
+    R[Request] --> A[Authentication]
+    A --> B[Logging]
+    B --> C[Validation]
+    C --> D[Rate Limiting]
+    D --> E[Controller]
+```
+
+Use when:
+
+> "Give every handler a chance to process the request."
+
+Examples:
+
+* HTTP middleware
+* Request pipelines
+* Logging
+* Authentication
+* Validation
+* Authorization
+
+This is why frameworks such as Express-style middleware feel very similar to Chain of Responsibility.
+
+---
+
+# 14. What Is Actually Necessary?
+
+If you're learning the pattern for interviews/design patterns, remember this **minimum structure**:
+
+```text
+                ┌───────────────────┐
+                │      Handler      │
+                ├───────────────────┤
+                │ + setNext()       │
+                │ + handle()        │
+                └─────────┬─────────┘
+                          │
+             ┌────────────┼────────────┐
+             ▼            ▼            ▼
+        Handler A     Handler B     Handler C
+```
+
+### Absolutely important
+
+```ts
+handle()
+```
+
+and the concept of:
+
+```ts
+nextHandler
+```
+
+### Usually present
+
+```ts
+setNext()
+```
+
+### Optional
+
+```ts
+canHandle()
+process()
+BaseHandler
+Request class
+Response class
+Fallback handler
+```
+
+You don't need every one of these to legitimately implement Chain of Responsibility.
+
+---
+
+# 15. The Most Important Concept
+
+Don't memorize:
+
+> "Chain of Responsibility means `setNext()` + `handle()`."
+
+Instead remember:
+
+> **A request is decoupled from the object that ultimately handles it.**
+
+The request starts somewhere in the chain:
+
+```text
+Client
+  ↓
+Handler A
+  ↓
+Handler B
+  ↓
+Handler C
+```
+
+The client only needs to know:
+
+```ts
+handler.handle(request);
+```
+
+It doesn't need:
+
+```ts
+if (type === "A") handlerA.handle();
+else if (type === "B") handlerB.handle();
+else if (type === "C") handlerC.handle();
+```
+
+That's the real benefit of the pattern.
