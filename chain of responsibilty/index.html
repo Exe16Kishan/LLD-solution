@@ -2,419 +2,629 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>readonly vs concrete class</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chain of Responsibility — The Line That Decides</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0d1117;
-    --panel:#12181f;
-    --border:#22303c;
-    --text:#c9d1d9;
-    --muted:#7d8590;
-    --lock:#e3b341;
-    --concrete:#58a6ff;
-    --success:#3fb950;
-    --danger:#f85149;
-    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --bg:#161C20;
+    --bg-soft:#1C2429;
+    --surface:#212B31;
+    --surface-raised:#28343B;
+    --grid:#2A3841;
+    --border:#37464F;
+    --border-soft:#2C3941;
+    --amber:#E8873A;
+    --amber-dim:#C36F2C;
+    --stamp-green:#6FA97A;
+    --stamp-red:#C1554B;
+    --text:#EDEBE3;
+    --text-dim:#9AA7AC;
+    --text-faint:#61717A;
+    --mono:'IBM Plex Mono', ui-monospace, monospace;
+    --display:'Bebas Neue', sans-serif;
+    --sans:'IBM Plex Sans', sans-serif;
   }
+
   *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
   body{
     margin:0;
     background:var(--bg);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size:42px 42px;
     color:var(--text);
     font-family:var(--sans);
-    padding:32px 16px 80px;
+    -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:820px;margin:0 auto;}
-  h1{
+
+  a{color:inherit;}
+  button{font-family:var(--mono);}
+
+  ::selection{background:var(--amber); color:#1A1005;}
+
+  :focus-visible{outline:2px solid var(--amber); outline-offset:3px;}
+
+  .eyebrow{
     font-family:var(--mono);
-    font-size:1.6rem;
-    color:#fff;
-    margin-bottom:4px;
-    letter-spacing:-0.5px;
+    font-size:12px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin:0 0 14px;
   }
-  .sub{color:var(--muted);margin-bottom:40px;font-size:0.95rem;}
+
+  .wrap{max-width:1080px; margin:0 auto; padding:0 28px;}
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 28px;
+    background:rgba(22,28,32,.86);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border-soft);
+    font-family:var(--mono);
+    font-size:12.5px;
+  }
+  .topbar-name{letter-spacing:.06em; color:var(--text-dim);}
+  .topbar-status{display:flex; align-items:center; gap:8px; color:var(--text-faint);}
+  .dot{width:7px; height:7px; border-radius:50%; background:var(--stamp-green); box-shadow:0 0 0 0 rgba(111,169,122,.6); animation:pulse 2.4s ease-out infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(111,169,122,.55);}
+    70%{box-shadow:0 0 0 7px rgba(111,169,122,0);}
+    100%{box-shadow:0 0 0 0 rgba(111,169,122,0);}
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    padding:88px 28px 60px;
+    max-width:1080px; margin:0 auto;
+  }
+  .hero h1{
+    font-family:var(--display);
+    font-weight:400;
+    font-size:clamp(48px, 8vw, 92px);
+    line-height:.96;
+    letter-spacing:.01em;
+    margin:0 0 22px;
+  }
+  .hero .lede{
+    font-size:17px;
+    line-height:1.65;
+    color:var(--text-dim);
+    max-width:560px;
+    margin:0 0 30px;
+  }
+  .cta{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono);
+    font-size:13px; letter-spacing:.04em;
+    text-decoration:none;
+    color:var(--bg);
+    background:var(--amber);
+    padding:12px 20px;
+    border-radius:3px;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .cta:hover{background:#F0994F; transform:translateY(-1px);}
+
+  .hero-belt{
+    position:relative;
+    margin-top:64px;
+    height:120px;
+    border-top:2px dashed var(--border);
+    border-bottom:2px dashed var(--border);
+  }
+  .hero-gate{
+    position:absolute; top:0; bottom:0; width:1px;
+    background:var(--border-soft);
+  }
+  .hero-gate span{
+    position:absolute; top:-24px; left:50%; transform:translateX(-50%);
+    font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+    color:var(--text-faint);
+  }
+  .hero-package{
+    position:absolute; top:50%; left:-40px; width:32px; height:32px;
+    transform:translate(-50%,-50%) rotate(45deg);
+    background:var(--amber);
+    border-radius:4px;
+    animation:travel 6s linear infinite;
+  }
+  @keyframes travel{
+    0%{left:-5%;}
+    100%{left:105%;}
+  }
+
+  /* ---------- generic section ---------- */
+  section{padding:74px 28px;}
   h2{
-    font-family:var(--mono);
-    font-size:1.1rem;
-    color:var(--lock);
-    margin-top:56px;
-    display:flex;align-items:center;gap:10px;
+    font-family:var(--display);
+    font-weight:400;
+    font-size:clamp(30px,4.4vw,44px);
+    letter-spacing:.01em;
+    margin:0 0 16px;
   }
-  h2.concrete-h{color:var(--concrete);}
-  h2 .badge{
-    font-size:0.65rem;
-    background:var(--panel);
-    border:1px solid var(--border);
-    padding:2px 8px;
-    border-radius:20px;
-    color:var(--muted);
-    font-family:var(--sans);
-  }
-  p{line-height:1.7;color:var(--text);}
-  .hi{color:var(--lock);font-weight:600;}
-  .hi-c{color:var(--concrete);font-weight:600;}
+  .section-lede{color:var(--text-dim); font-size:15.5px; line-height:1.7; max-width:620px; margin:0 0 42px;}
 
-  /* ---- code block ---- */
-  pre{
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:8px;
-    padding:16px 18px;
-    overflow-x:auto;
-    font-family:var(--mono);
-    font-size:0.85rem;
-    line-height:1.6;
-    margin:16px 0;
+  /* ---------- definition ---------- */
+  .definition{border-top:1px solid var(--border-soft);}
+  .def-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center;
+    max-width:1080px; margin:0 auto;
   }
-  .kw{color:#ff7b72;}
-  .type{color:#79c0ff;}
-  .str{color:#a5d6ff;}
-  .com{color:#8b949e;font-style:italic;}
-  .fn{color:#d2a8ff;}
+  .def-grid p{font-size:15.5px; line-height:1.75; color:var(--text-dim);}
+  .def-grid strong{color:var(--text); font-weight:600;}
+  .schematic{
+    background:var(--bg-soft);
+    border:1px solid var(--border-soft);
+    border-radius:6px;
+    padding:26px 20px;
+  }
+  .schematic svg{width:100%; height:auto; display:block;}
 
-  /* ---- readonly demo ---- */
-  .demo{
-    background:var(--panel);
+  /* ---------- demo ---------- */
+  .demo{border-top:1px solid var(--border-soft); background:var(--bg-soft);}
+  .scenario-row{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:36px;}
+  .scenario-btn{
+    background:var(--surface);
     border:1px solid var(--border);
-    border-radius:10px;
-    padding:20px;
-    margin:20px 0;
-  }
-  .lockrow{
-    display:flex;
-    align-items:center;
-    gap:14px;
-    font-family:var(--mono);
-    font-size:0.95rem;
-    padding:10px 14px;
-    border-radius:6px;
-    background:#0d1117;
-    border:1px solid var(--border);
-  }
-  .lockicon{
-    width:22px;height:22px;
-    flex-shrink:0;
-    position:relative;
-  }
-  .lockicon svg{width:100%;height:100%;}
-  .shackle{
-    transform-origin: 11px 8px;
-    transition: transform 0.35s ease;
-  }
-  .lockrow.shake .shackle{
-    animation: rattle 0.4s ease;
-  }
-  @keyframes rattle{
-    0%,100%{transform:translateX(0) rotate(0);}
-    20%{transform:translateX(-2px) rotate(-6deg);}
-    40%{transform:translateX(2px) rotate(6deg);}
-    60%{transform:translateX(-2px) rotate(-4deg);}
-    80%{transform:translateX(2px) rotate(4deg);}
-  }
-  .btnrow{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;}
-  button{
-    font-family:var(--mono);
-    font-size:0.82rem;
-    background:#1c2530;
-    color:var(--text);
-    border:1px solid var(--border);
-    padding:8px 14px;
-    border-radius:6px;
+    color:var(--text-dim);
+    font-size:12.5px; letter-spacing:.04em;
+    padding:10px 16px;
+    border-radius:3px;
     cursor:pointer;
-    transition: border-color 0.2s, background 0.2s;
+    transition:border-color .15s ease, color .15s ease;
   }
-  button:hover{border-color:var(--concrete);background:#1a2530;}
-  button:focus-visible{outline:2px solid var(--concrete);outline-offset:2px;}
-  #errBox{
-    margin-top:12px;
-    font-family:var(--mono);
-    font-size:0.82rem;
-    color:var(--danger);
-    background:rgba(248,81,73,0.08);
-    border:1px solid rgba(248,81,73,0.35);
-    border-radius:6px;
-    padding:10px 14px;
-    max-height:0;
-    opacity:0;
-    overflow:hidden;
-    transition: max-height 0.35s ease, opacity 0.3s ease, padding 0.35s ease;
-  }
-  #errBox.show{
-    max-height:80px;
-    opacity:1;
-  }
-  #okBox{
-    margin-top:12px;
-    font-family:var(--mono);
-    font-size:0.82rem;
-    color:var(--success);
-    background:rgba(63,185,80,0.08);
-    border:1px solid rgba(63,185,80,0.35);
-    border-radius:6px;
-    padding:10px 14px;
-    max-height:0;
-    opacity:0;
-    overflow:hidden;
-    transition: max-height 0.35s ease, opacity 0.3s ease, padding 0.35s ease;
-  }
-  #okBox.show{max-height:80px;opacity:1;}
+  .scenario-btn:hover{border-color:var(--amber-dim); color:var(--text);}
+  .scenario-btn.is-active{border-color:var(--amber); color:var(--amber);}
+  .scenario-btn:disabled{opacity:.5; cursor:not-allowed;}
 
-  /* ---- concrete class diagram ---- */
-  .diagram{
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:10px;
-    padding:32px 16px 24px;
-    margin:20px 0;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:0;
+  .belt-rig{
+    position:relative;
+    display:flex; gap:18px;
+    padding-top:22px;
+    margin-bottom:8px;
   }
-  .box{
-    font-family:var(--mono);
-    font-size:0.85rem;
-    padding:10px 20px;
-    border-radius:8px;
+  .station{
+    flex:1;
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:22px 16px 26px;
     text-align:center;
-    position:relative;
+    transition:border-color .25s ease, background .25s ease;
   }
-  .box-interface{
-    border:1.5px dashed var(--muted);
-    color:var(--muted);
-    background:#0d1117;
+  .station-index{
+    font-family:var(--mono); font-size:11px; color:var(--text-faint);
+    letter-spacing:.08em; margin-bottom:8px;
   }
-  .box-interface .tag{
-    display:block;font-size:0.65rem;color:var(--muted);margin-bottom:2px;letter-spacing:1px;
+  .station-name{
+    font-family:var(--display); font-size:22px; letter-spacing:.01em; margin-bottom:6px;
   }
-  .connector{
-    width:1.5px;
-    height:36px;
-    background:linear-gradient(var(--border), var(--concrete));
-    position:relative;
-    opacity:0;
-    transform:scaleY(0);
-    transform-origin: top;
-    animation: growLine 0.6s ease forwards;
-  }
-  .row{
-    display:flex;
-    gap:60px;
-    margin-top:0;
-  }
-  .col{display:flex;flex-direction:column;align-items:center;}
-  .box-concrete{
-    border:1.5px solid var(--concrete);
-    color:#e6f1ff;
-    background:#0d1117;
-    box-shadow: 0 0 0 rgba(88,166,255,0);
-    animation: popIn 0.5s ease forwards;
-    opacity:0;
-    transform: scale(0.85);
-  }
-  .box-concrete .tag{
-    display:block;font-size:0.65rem;color:var(--concrete);margin-bottom:2px;letter-spacing:1px;
-  }
-  .box-concrete.delay1{animation-delay:0.9s;}
-  .box-concrete.delay2{animation-delay:1.15s;}
-  .connector.delay1{animation-delay:0.5s;}
-  .connector.delay2{animation-delay:0.5s;}
+  .station-rule{font-family:var(--mono); font-size:11.5px; color:var(--text-faint);}
+  .station.is-checking{border-color:var(--amber); background:var(--surface-raised);}
+  .station.is-passed{border-color:var(--border-soft); opacity:.55;}
+  .station.is-approved{border-color:var(--stamp-green); background:var(--surface-raised);}
+  .station.is-rejected{border-color:var(--stamp-red); background:var(--surface-raised);}
 
-  @keyframes growLine{
-    to{opacity:1;transform:scaleY(1);}
+  .stamp{
+    position:absolute; top:8px; right:10px;
+    font-family:var(--mono); font-weight:600; font-size:11px; letter-spacing:.06em;
+    padding:4px 8px; border-radius:2px;
+    opacity:0; transform:rotate(-9deg) scale(.7);
+    transition:opacity .2s ease, transform .25s cubic-bezier(.34,1.56,.64,1);
+    border:1px solid currentColor;
   }
-  @keyframes popIn{
-    to{opacity:1;transform:scale(1);}
+  .stamp.stamp--approved{color:var(--stamp-green);}
+  .stamp.stamp--rejected{color:var(--stamp-red);}
+  .stamp.is-visible{opacity:1; transform:rotate(-9deg) scale(1);}
+
+  .belt-line{
+    position:relative; height:4px;
+    background:repeating-linear-gradient(90deg, var(--border) 0 10px, transparent 10px 18px);
+    margin-bottom:34px;
+  }
+  .token{
+    position:absolute; top:50%; left:16.6%;
+    width:14px; height:14px;
+    background:var(--amber);
+    border-radius:3px;
+    transform:translate(-50%,-50%) rotate(45deg);
+    transition:left .55s cubic-bezier(.65,0,.35,1), opacity .3s ease, transform .3s ease;
+  }
+  .token.is-absorbed{opacity:0; transform:translate(-50%,-50%) rotate(45deg) scale(.2);}
+
+  @media (max-width:640px){
+    .belt-rig{flex-direction:column;}
+    .belt-line{display:none;}
+    .token{display:none;}
   }
 
-  .replay{
-    margin-top:20px;
-  }
-
-  .compare{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:14px;
-    margin:18px 0;
-  }
-  @media(max-width:600px){.compare{grid-template-columns:1fr;}}
-  .ccard{
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:8px;
-    padding:14px 16px;
-  }
-  .ccard h3{
-    margin:0 0 8px;
+  .console{
+    background:#101518;
+    border:1px solid var(--border-soft);
+    border-radius:6px;
+    padding:18px 20px;
+    min-height:170px;
+    max-height:230px;
+    overflow-y:auto;
     font-family:var(--mono);
-    font-size:0.85rem;
+    font-size:12.5px;
+    line-height:1.9;
   }
-  .ccard.abstract h3{color:var(--muted);}
-  .ccard.concrete h3{color:var(--concrete);}
-  .ccard ul{margin:0;padding-left:18px;font-size:0.85rem;line-height:1.7;color:var(--text);}
+  .console-line{opacity:0; transform:translateY(4px); transition:opacity .25s ease, transform .25s ease;}
+  .console-line.is-in{opacity:1; transform:translateY(0);}
+  .console-line .prompt{color:var(--text-faint); margin-right:8px;}
+  .console-line.tone-ok{color:var(--stamp-green);}
+  .console-line.tone-warn{color:var(--amber);}
+  .console-line.tone-bad{color:var(--stamp-red);}
+  .console-line.tone-neutral{color:var(--text-dim);}
+  .console-cursor{display:inline-block; width:7px; height:13px; background:var(--amber); vertical-align:-2px; animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
 
-  .note{
-    font-size:0.85rem;
-    color:var(--muted);
-    border-left:3px solid var(--lock);
-    padding:8px 14px;
-    background:rgba(227,179,65,0.06);
-    border-radius:0 6px 6px 0;
-    margin:16px 0;
+  /* ---------- code ---------- */
+  .code{border-top:1px solid var(--border-soft);}
+  .code-window{
+    max-width:1080px; margin:0 auto;
+    background:#101518;
+    border:1px solid var(--border-soft);
+    border-radius:8px;
+    overflow:hidden;
   }
-  .note.blue{border-left-color:var(--concrete);background:rgba(88,166,255,0.06);}
+  .code-titlebar{
+    display:flex; align-items:center; gap:8px;
+    padding:12px 16px;
+    background:var(--bg-soft);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .code-dot{width:10px; height:10px; border-radius:50%;}
+  .code-dot:nth-child(1){background:#C1554B;}
+  .code-dot:nth-child(2){background:#E8873A;}
+  .code-dot:nth-child(3){background:#6FA97A;}
+  .code-filename{margin-left:8px; font-family:var(--mono); font-size:12px; color:var(--text-faint);}
+  pre.code-body{
+    margin:0; padding:26px 24px;
+    overflow-x:auto;
+    font-family:var(--mono); font-size:13px; line-height:1.75; color:var(--text-dim);
+  }
+  .tok-kw{color:var(--amber);}
+  .tok-type{color:var(--stamp-green);}
+  .tok-str{color:#D9C08C;}
+  .tok-com{color:var(--text-faint); font-style:italic;}
+  .tok-fn{color:#8FB6D9;}
+
+  /* ---------- checklist ---------- */
+  .checklist{border-top:1px solid var(--border-soft);}
+  .check-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:18px;
+    max-width:1080px; margin:0 auto;
+  }
+  .check-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:24px 22px;
+  }
+  .check-tag{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.06em;
+    margin-bottom:14px;
+  }
+  .check-mark{
+    width:18px; height:18px; border-radius:3px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700;
+  }
+  .check-card.use .check-mark{background:rgba(111,169,122,.15); color:var(--stamp-green);}
+  .check-card.avoid .check-mark{background:rgba(193,85,75,.15); color:var(--stamp-red);}
+  .check-card.mistake .check-mark{background:rgba(232,135,58,.15); color:var(--amber);}
+  .check-card.related .check-mark{background:rgba(143,182,217,.15); color:#8FB6D9;}
+  .check-card p{font-size:14.5px; line-height:1.65; color:var(--text-dim); margin:0;}
+
+  @media (max-width:640px){
+    .def-grid{grid-template-columns:1fr;}
+    .check-grid{grid-template-columns:1fr;}
+    .hero{padding-top:64px;}
+  }
 
   footer{
-    margin-top:60px;
+    padding:40px 28px 60px;
     text-align:center;
-    color:var(--muted);
-    font-size:0.75rem;
-    font-family:var(--mono);
+    font-family:var(--mono); font-size:12px; color:var(--text-faint);
+    border-top:1px solid var(--border-soft);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important;}
+    .hero-package{left:50%;}
   }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>&lt;readonly&gt; aur concrete class</h1>
-  <div class="sub">do confusing OOP terms, ek interactive page mein</div>
 
-  <!-- ===================== READONLY ===================== -->
-  <h2>1. readonly kya hota hai <span class="badge">interactive demo</span></h2>
-  <p><span class="hi">readonly</span> ek modifier hai jo TypeScript mein kisi property pe laga dete ho taaki wo <strong>constructor ke andar sirf ek baar</strong> set ho sake — uske baad koi bhi (khud class ke andar bhi) usse dobara change nahi kar sakta.</p>
+<header class="topbar">
+  <span class="topbar-name">CHAIN OF RESPONSIBILITY</span>
+  <span class="topbar-status"><span class="dot"></span>LINE OPERATIONAL</span>
+</header>
 
-  <pre><span class="kw">class</span> <span class="type">DebitCard</span> {
-  <span class="kw">readonly</span> cardNumber: <span class="type">string</span>;
+<section class="hero">
+  <p class="eyebrow">Behavioral Pattern · LLD</p>
+  <h1>THE REQUEST<br>DOESN'T KNOW<br>WHO CATCHES IT.</h1>
+  <p class="lede">A chain of handlers stands in a line. Each one is free to accept the work — or wave it down the line to the next. No handler needs to know who comes after; it only needs to know someone does.</p>
+  <a class="cta" href="#demo">Watch it run ↓</a>
 
-  <span class="fn">constructor</span>(cardNumber: <span class="type">string</span>) {
-    <span class="kw">this</span>.cardNumber = cardNumber; <span class="com">// ✅ yahan allowed hai</span>
-  }
-
-  <span class="fn">updateCard</span>(newNumber: <span class="type">string</span>) {
-    <span class="kw">this</span>.cardNumber = newNumber; <span class="com">// ❌ Error: cannot assign to readonly property</span>
-  }
-}</pre>
-
-  <div class="demo">
-    <div class="lockrow" id="lockRow">
-      <div class="lockicon" id="lockIcon">
-        <svg viewBox="0 0 22 22" fill="none">
-          <rect x="4" y="10" width="14" height="10" rx="2" fill="#e3b341"/>
-          <path class="shackle" d="M7 10V7a4 4 0 0 1 8 0v3" stroke="#e3b341" stroke-width="2" fill="none"/>
-        </svg>
-      </div>
-      <span>cardNumber = <span id="cardVal">"1234 5678 9012"</span></span>
-    </div>
-    <div class="btnrow">
-      <button id="tryChange">this.cardNumber = "0000 0000 0000" try karo</button>
-      <button id="tryConstruct">naya card constructor se banao</button>
-    </div>
-    <div id="errBox">🚫 TypeScript Error: Cannot assign to 'cardNumber' because it is a read-only property.</div>
-    <div id="okBox">✅ Constructor ke andar set hone diya — yahi readonly ka allowed moment hai.</div>
+  <div class="hero-belt" aria-hidden="true">
+    <div class="hero-gate" style="left:25%"><span>H1</span></div>
+    <div class="hero-gate" style="left:50%"><span>H2</span></div>
+    <div class="hero-gate" style="left:75%"><span>H3</span></div>
+    <div class="hero-package"></div>
   </div>
+</section>
 
-  <div class="note">💡 <strong>Kyun use karte hain:</strong> card number, id, cvv jaisi values ek baar create hone ke baad kabhi change nahi honi chahiye. <span class="hi">readonly</span> lagane se TypeScript khud compile-time pe rok deta hai agar galti se koi baad mein value badalne ki koshish kare — bug pehle hi pakड़ liya jaata hai, runtime tak pahuchne nahi deta.</div>
-
-  <!-- ===================== CONCRETE CLASS ===================== -->
-  <h2 class="concrete-h">2. Concrete class kya hoti hai <span class="badge">animated diagram</span></h2>
-  <p><strong>Haan, concrete class ek normal class hi hoti hai</strong> — bas naam isliye diya gaya hai taaki use <em>abstract class</em> ya <em>interface</em> se differentiate kiya ja sake. "Concrete" ka matlab hai: <span class="hi-c">is class ka object seedha `new` keyword se ban sakta hai, kyunki isme har method ka pura implementation likha hua hai.</span></p>
-
-  <div class="diagram">
-    <div class="box box-interface">
-      <span class="tag">INTERFACE (blueprint only)</span>
-      PaymentStrategy
+<section class="definition">
+  <div class="def-grid">
+    <div>
+      <p class="eyebrow">The idea</p>
+      <p>You send a request into a chain of handler objects. Each handler asks itself one question: <strong>"can I deal with this?"</strong> If yes, it processes it and the journey ends. If no, it forwards the exact same request to the next handler — and steps out of the story.</p>
+      <p>The caller only ever talks to the <strong>first</strong> handler. It has zero knowledge of how many handlers exist, or which one will eventually do the work. That's the decoupling this pattern is built for.</p>
     </div>
-    <div class="row">
-      <div class="col">
-        <div class="connector delay1"></div>
-        <div class="box box-concrete delay1">
-          <span class="tag">CONCRETE CLASS</span>
-          Upi
-        </div>
-      </div>
-      <div class="col">
-        <div class="connector delay2"></div>
-        <div class="box box-concrete delay2">
-          <span class="tag">CONCRETE CLASS</span>
-          DebitCard
-        </div>
-      </div>
-    </div>
-    <div class="btnrow replay">
-      <button id="replayBtn">animation dobara dekho</button>
+    <div class="schematic">
+      <svg viewBox="0 0 420 220" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="90" width="70" height="40" rx="3" fill="none" stroke="#37464F"/>
+        <text x="45" y="114" text-anchor="middle" fill="#9AA7AC" font-family="IBM Plex Mono" font-size="11">CLIENT</text>
+        <line x1="80" y1="110" x2="128" y2="110" stroke="#37464F" stroke-width="1.5" stroke-dasharray="3 4"/>
+        <polygon points="128,110 120,106 120,114" fill="#37464F"/>
+
+        <rect x="130" y="70" width="80" height="40" rx="3" fill="none" stroke="#E8873A"/>
+        <text x="170" y="94" text-anchor="middle" fill="#E8873A" font-family="IBM Plex Mono" font-size="11">HANDLER 1</text>
+        <line x1="210" y1="90" x2="258" y2="90" stroke="#37464F" stroke-width="1.5" stroke-dasharray="3 4"/>
+        <polygon points="258,90 250,86 250,94" fill="#37464F"/>
+        <text x="234" y="78" text-anchor="middle" fill="#61717A" font-family="IBM Plex Mono" font-size="9">next</text>
+
+        <rect x="260" y="70" width="80" height="40" rx="3" fill="none" stroke="#37464F"/>
+        <text x="300" y="94" text-anchor="middle" fill="#9AA7AC" font-family="IBM Plex Mono" font-size="11">HANDLER 2</text>
+        <line x1="340" y1="90" x2="388" y2="90" stroke="#37464F" stroke-width="1.5" stroke-dasharray="3 4"/>
+        <polygon points="388,90 380,86 380,94" fill="#37464F"/>
+        <text x="364" y="78" text-anchor="middle" fill="#61717A" font-family="IBM Plex Mono" font-size="9">next</text>
+
+        <rect x="330" y="150" width="80" height="40" rx="3" fill="none" stroke="#37464F" transform="translate(-390,0)"/>
+
+        <rect x="130" y="150" width="80" height="40" rx="3" fill="none" stroke="#6FA97A"/>
+        <text x="170" y="174" text-anchor="middle" fill="#6FA97A" font-family="IBM Plex Mono" font-size="11">HANDLER 3</text>
+        <line x1="340" y1="110" x2="220" y2="150" stroke="#37464F" stroke-width="1.5" stroke-dasharray="3 4"/>
+        <text x="216" y="196" text-anchor="middle" fill="#61717A" font-family="IBM Plex Mono" font-size="9">handles it ✓</text>
+      </svg>
     </div>
   </div>
+</section>
 
-  <div class="compare">
-    <div class="ccard abstract">
-      <h3>Interface / Abstract</h3>
-      <ul>
-        <li>Sirf <em>contract</em> deta hai</li>
-        <li>Method sirf signature — body nahi</li>
-        <li><code>new PaymentStrategy()</code> ❌ karke object nahi bana sakte</li>
-      </ul>
-    </div>
-    <div class="ccard concrete">
-      <h3>Concrete Class</h3>
-      <ul>
-        <li>Poora <em>implementation</em> deta hai</li>
-        <li>Har method ki actual body likhi hoti hai</li>
-        <li><code>new Upi("id")</code> ✅ seedha object ban jaata hai</li>
-      </ul>
-    </div>
+<section id="demo" class="demo">
+  <p class="eyebrow">Interactive · Leave Approval Line</p>
+  <h2>Run a request through the line</h2>
+  <p class="section-lede">Same example from the code below. Pick a leave request and watch it travel through Team Lead → Manager → HR until someone's allowed to approve it.</p>
+
+  <div class="scenario-row">
+    <button class="scenario-btn" data-days="1">1-day leave</button>
+    <button class="scenario-btn" data-days="3">3-day leave</button>
+    <button class="scenario-btn" data-days="10">10-day leave</button>
   </div>
 
-  <pre><span class="kw">interface</span> <span class="type">PaymentStrategy</span> {   <span class="com">// blueprint — abstract</span>
-  pay(amount: <span class="type">number</span>): <span class="type">boolean</span>;
+  <div class="belt-rig" id="beltRig">
+    <div class="station" id="station-0">
+      <div class="stamp stamp--approved" id="stamp-0">APPROVED</div>
+      <div class="station-index">STATION 01</div>
+      <div class="station-name">TEAM LEAD</div>
+      <div class="station-rule">handles ≤ 1 day</div>
+    </div>
+    <div class="station" id="station-1">
+      <div class="stamp stamp--approved" id="stamp-1">APPROVED</div>
+      <div class="station-index">STATION 02</div>
+      <div class="station-name">MANAGER</div>
+      <div class="station-rule">handles ≤ 3 days</div>
+    </div>
+    <div class="station" id="station-2">
+      <div class="stamp stamp--approved" id="stamp-2">APPROVED</div>
+      <div class="station-index">STATION 03</div>
+      <div class="station-name">HR</div>
+      <div class="station-rule">handles anything</div>
+    </div>
+    <div class="token" id="token"></div>
+  </div>
+  <div class="belt-line"></div>
+
+  <div class="console" id="console"></div>
+</section>
+
+<section class="code">
+  <p class="eyebrow">The code behind it</p>
+  <h2>Same chain, written out</h2>
+  <p class="section-lede">This is the exact chain the demo above is running — three handlers, one base class, one rule each.</p>
+
+  <div class="code-window">
+    <div class="code-titlebar">
+      <span class="code-dot"></span><span class="code-dot"></span><span class="code-dot"></span>
+      <span class="code-filename">leave-handler.ts</span>
+    </div>
+    <pre class="code-body"><span class="tok-com">// Step 1: shape of the request</span>
+<span class="tok-kw">interface</span> <span class="tok-type">LeaveRequest</span> {
+  employeeName: <span class="tok-type">string</span>;
+  days: <span class="tok-type">number</span>;
 }
 
-<span class="kw">class</span> <span class="type">Upi</span> <span class="kw">implements</span> <span class="type">PaymentStrategy</span> {  <span class="com">// concrete — real class</span>
-  <span class="fn">pay</span>(amount: <span class="type">number</span>): <span class="type">boolean</span> {
-    <span class="com">// actual logic yahan likhi hai</span>
-    <span class="kw">return</span> <span class="kw">true</span>;
+<span class="tok-com">// Step 2: base handler — the common contract</span>
+<span class="tok-kw">abstract</span> <span class="tok-kw">class</span> <span class="tok-type">LeaveHandler</span> {
+  <span class="tok-kw">protected</span> next: <span class="tok-type">LeaveHandler</span> | <span class="tok-kw">null</span> = <span class="tok-kw">null</span>;
+
+  <span class="tok-fn">setNext</span>(handler: <span class="tok-type">LeaveHandler</span>): <span class="tok-type">LeaveHandler</span> {
+    <span class="tok-kw">this</span>.next = handler;
+    <span class="tok-kw">return</span> handler;
+  }
+
+  <span class="tok-fn">handle</span>(request: <span class="tok-type">LeaveRequest</span>): <span class="tok-type">void</span> {
+    <span class="tok-kw">if</span> (<span class="tok-kw">this</span>.next) {
+      <span class="tok-kw">this</span>.next.<span class="tok-fn">handle</span>(request);
+    } <span class="tok-kw">else</span> {
+      console.<span class="tok-fn">log</span>(<span class="tok-str">`No one could approve ${request.employeeName}'s leave.`</span>);
+    }
   }
 }
 
-<span class="kw">const</span> p = <span class="kw">new</span> <span class="type">Upi</span>();   <span class="com">// ✅ sirf concrete class se object banta hai</span></pre>
+<span class="tok-com">// Step 3: concrete handlers — check, or forward</span>
+<span class="tok-kw">class</span> <span class="tok-type">TeamLead</span> <span class="tok-kw">extends</span> <span class="tok-type">LeaveHandler</span> {
+  <span class="tok-fn">handle</span>(request: <span class="tok-type">LeaveRequest</span>): <span class="tok-type">void</span> {
+    <span class="tok-kw">if</span> (request.days <= <span class="tok-str">1</span>) {
+      console.<span class="tok-fn">log</span>(<span class="tok-str">`Team Lead approved it.`</span>);
+    } <span class="tok-kw">else</span> {
+      <span class="tok-kw">super</span>.<span class="tok-fn">handle</span>(request); <span class="tok-com">// not mine — pass it on</span>
+    }
+  }
+}
 
-  <div class="note blue">💡 <strong>Yaad rakhne ka trick:</strong> agar kisi class ko tum bina kisi aur cheez ke seedha <span class="hi-c">new</span> kar sakte ho aur usme har method "ready to run" hai — wo concrete class hai. Interface/abstract class sirf naam batate hai, kaam concrete class hi karti hai.</div>
+<span class="tok-com">// Manager and HR follow the same shape,
+// each with its own threshold.</span>
 
-  <footer>readonly = value lock after creation &nbsp;·&nbsp; concrete class = normal, fully-implemented, directly-instantiable class</footer>
-</div>
+<span class="tok-com">// Step 4: build the chain, once</span>
+<span class="tok-kw">const</span> teamLead = <span class="tok-kw">new</span> <span class="tok-type">TeamLead</span>();
+<span class="tok-kw">const</span> manager = <span class="tok-kw">new</span> <span class="tok-type">Manager</span>();
+<span class="tok-kw">const</span> hr = <span class="tok-kw">new</span> <span class="tok-type">HR</span>();
+teamLead.<span class="tok-fn">setNext</span>(manager).<span class="tok-fn">setNext</span>(hr);
+
+<span class="tok-com">// Step 5: the client only ever calls the first link</span>
+teamLead.<span class="tok-fn">handle</span>({ employeeName: <span class="tok-str">"Kishan"</span>, days: <span class="tok-str">5</span> });</pre>
+  </div>
+</section>
+
+<section class="checklist">
+  <p class="eyebrow">Field notes</p>
+  <h2>Before you reach for it</h2>
+  <div class="check-grid">
+    <div class="check-card use">
+      <span class="check-tag"><span class="check-mark">✓</span>USE WHEN</span>
+      <p>More than one object could handle a request, and you don't want a giant if-else deciding which one — or you want new handlers addable without touching old code.</p>
+    </div>
+    <div class="check-card avoid">
+      <span class="check-tag"><span class="check-mark">✕</span>AVOID WHEN</span>
+      <p>There's really only one handler and it'll never grow. A chain of one is just a function wearing a costume — skip the ceremony.</p>
+    </div>
+    <div class="check-card mistake">
+      <span class="check-tag"><span class="check-mark">!</span>COMMON MISTAKE</span>
+      <p>Forgetting to call the next handler when a handler can't process the request. The request quietly vanishes — no error, no trace. Always give the chain a fallback handler.</p>
+    </div>
+    <div class="check-card related">
+      <span class="check-tag"><span class="check-mark">⇄</span>DON'T CONFUSE WITH</span>
+      <p>Decorator. It also links objects, but every layer always runs and adds behavior. Here, a handler either owns the request fully or steps aside entirely.</p>
+    </div>
+  </div>
+</section>
+
+<footer>designed for learning the pattern, not for production use</footer>
 
 <script>
-  const lockRow = document.getElementById('lockRow');
-  const errBox = document.getElementById('errBox');
-  const okBox = document.getElementById('okBox');
-  const cardVal = document.getElementById('cardVal');
+(function(){
+  var stations = [
+    { name:'TEAM LEAD', limit:1 },
+    { name:'MANAGER', limit:3 },
+    { name:'HR', limit:Infinity }
+  ];
 
-  document.getElementById('tryChange').addEventListener('click', () => {
-    okBox.classList.remove('show');
-    lockRow.classList.remove('shake');
-    void lockRow.offsetWidth; // restart animation
-    lockRow.classList.add('shake');
-    errBox.classList.add('show');
-  });
+  var beltRig = document.getElementById('beltRig');
+  var token = document.getElementById('token');
+  var consoleEl = document.getElementById('console');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('.scenario-btn'));
+  var playing = false;
 
-  document.getElementById('tryConstruct').addEventListener('click', () => {
-    errBox.classList.remove('show');
-    lockRow.classList.remove('shake');
-    okBox.classList.add('show');
-    cardVal.textContent = '"' + (9000 + Math.floor(Math.random()*999)) + ' 0000 0000"';
-  });
+  function wait(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
 
-  document.getElementById('replayBtn').addEventListener('click', () => {
-    const boxes = document.querySelectorAll('.box-concrete, .connector');
-    boxes.forEach(el => {
-      el.style.animation = 'none';
-      void el.offsetWidth;
-      el.style.animation = '';
+  function log(text, tone){
+    var line = document.createElement('div');
+    line.className = 'console-line tone-' + (tone || 'neutral');
+    line.innerHTML = '<span class="prompt">&gt;</span>' + text;
+    consoleEl.appendChild(line);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+    requestAnimationFrame(function(){ line.classList.add('is-in'); });
+  }
+
+  function resetStations(){
+    for (var i = 0; i < stations.length; i++){
+      var st = document.getElementById('station-' + i);
+      st.classList.remove('is-checking','is-passed','is-approved','is-rejected');
+      var stamp = document.getElementById('stamp-' + i);
+      stamp.classList.remove('is-visible');
+    }
+    token.classList.remove('is-absorbed');
+    token.style.left = '16.6%';
+    consoleEl.innerHTML = '';
+  }
+
+  function positionToken(i){
+    var n = stations.length;
+    token.style.left = (((i + 0.5) / n) * 100) + '%';
+  }
+
+  function matchIndex(days){
+    for (var i = 0; i < stations.length; i++){
+      if (days <= stations[i].limit) return i;
+    }
+    return stations.length - 1;
+  }
+
+  async function run(days){
+    if (playing) return;
+    playing = true;
+    buttons.forEach(function(b){ b.disabled = true; });
+    resetStations();
+
+    log('Leave request received &middot; ' + days + ' day(s)', 'neutral');
+    await wait(450);
+
+    var target = matchIndex(days);
+
+    for (var i = 0; i < stations.length; i++){
+      var st = document.getElementById('station-' + i);
+      positionToken(i);
+      await wait(500);
+      st.classList.add('is-checking');
+      log(stations[i].name + ': checking &mdash; can handle up to ' + (stations[i].limit === Infinity ? 'any' : stations[i].limit) + ' day(s)', 'warn');
+      await wait(650);
+
+      if (i === target){
+        st.classList.remove('is-checking');
+        st.classList.add('is-approved');
+        document.getElementById('stamp-' + i).classList.add('is-visible');
+        log(stations[i].name + ': approved the request ✓', 'ok');
+        token.classList.add('is-absorbed');
+        break;
+      } else {
+        st.classList.remove('is-checking');
+        st.classList.add('is-passed');
+        log(stations[i].name + ': out of my range, forwarding &rarr;', 'neutral');
+        await wait(350);
+      }
+    }
+
+    playing = false;
+    buttons.forEach(function(b){ b.disabled = false; });
+  }
+
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.classList.remove('is-active'); });
+      btn.classList.add('is-active');
+      run(parseInt(btn.dataset.days, 10));
     });
   });
+
+  resetStations();
+  log('Line idle. Pick a request above to begin.', 'neutral');
+})();
 </script>
+
 </body>
 </html>
