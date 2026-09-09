@@ -18,7 +18,7 @@ class Email implements Send {
 }
 
 class Factory {
-  static notification(type: string) {
+  static notification(type: string): Send {
     switch (type) {
       case "Sms":
         return new Sms();
@@ -27,20 +27,17 @@ class Factory {
         return new Email();
 
       default:
-        console.log("unknown notification type")  
-      break;
+        throw new Error("Unknown notification type");
     }
   }
 }
 
-
 class ClientNotification {
-    static create(type : string , m:string){
-        const notification = Factory.notification(type)
-        notification?.send(m)
-    }
+  static create(type: string, m: string) {
+    const notification = Factory.notification(type);
+    notification.send(m);
+  }
 }
 
-
-const sms = ClientNotification.create("Sms","helllo")
-const mail = ClientNotification.create("Email","helllo")
+const sms = ClientNotification.create("Sms", "helllo");
+const mail = ClientNotification.create("Email", "helllo");

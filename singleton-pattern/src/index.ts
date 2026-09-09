@@ -16,6 +16,8 @@ class School {
 
 const guruKripa = School.getInstance();
 const stThomas = School.getInstance();
+
+
 guruKripa.set("1", [
   { name: "kishan", roll: 1 },
   { name: "cutieBhai", roll: 2 },
