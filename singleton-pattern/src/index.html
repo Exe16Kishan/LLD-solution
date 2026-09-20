@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Singleton Pattern — Visual Flow</title>
+    <style>
+      :root {
+        --bg: #0f1117;
+        --panel: #161925;
+        --border: #2a2e3f;
+        --text: #e6e6e6;
+        --text-dim: #9aa0b4;
+        --accent: #4f8cff;
+        --accent-bg: rgba(79, 140, 255, 0.15);
+        --accent-border: #4f8cff;
+        --green: #3ecf8e;
+        --green-bg: rgba(62, 207, 142, 0.15);
+        --red: #ff5f5f;
+        --red-bg: rgba(255, 95, 95, 0.15);
+        --amber: #f2a623;
+        --mono: "Consolas", "Menlo", monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 28px 16px 60px;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Arial,
+          sans-serif;
+        display: flex;
+        justify-content: center;
+      }
+      .wrap {
+        width: 100%;
+        max-width: 780px;
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+      .subtitle {
+        color: var(--text-dim);
+        font-size: 13px;
+        margin: 0 0 22px;
+      }
+
+      /* ---- diagram ---- */
+      .diagram-shell {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 18px;
+        position: relative;
+      }
+      svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      .node-rect {
+        fill: #1c2033;
+        stroke: var(--border);
+        stroke-width: 1;
+        transition: all 0.3s ease;
+      }
+      .node-rect.active {
+        fill: var(--accent-bg);
+        stroke: var(--accent);
+        stroke-width: 1.5;
+      }
+      .node-rect.blocked {
+        fill: var(--red-bg);
+        stroke: var(--red);
+      }
+      .node-rect.filled {
+        fill: var(--green-bg);
+        stroke: var(--green);
+      }
+      .node-rect.dashed {
+        stroke-dasharray: 4 3;
+      }
+      .node-text {
+        fill: var(--text-dim);
+        font-size: 12px;
+        font-family: -apple-system, sans-serif;
+        transition: fill 0.3s ease;
+      }
+      .node-text.active-text {
+        fill: var(--accent);
+        font-weight: 600;
+      }
+      .node-text.filled-text {
+        fill: var(--green);
+        font-weight: 600;
+      }
+      .diamond {
+        fill: #1c2033;
+        stroke: var(--border);
+        stroke-width: 1;
+        transition: all 0.3s ease;
+      }
+      .diamond.active {
+        fill: var(--accent-bg);
+        stroke: var(--accent);
+        stroke-width: 1.5;
+      }
+      .conn {
+        stroke: var(--border);
+        stroke-width: 1.2;
+        fill: none;
+      }
+      .conn.active {
+        stroke: var(--accent);
+        stroke-width: 2;
+      }
+      .conn.yes {
+        stroke: var(--green);
+        stroke-width: 2;
+      }
+      .conn.no {
+        stroke: var(--amber);
+        stroke-width: 2;
+      }
+      .badge {
+        font-size: 10px;
+        fill: var(--text-dim);
+      }
+      .badge.yes {
+        fill: var(--green);
+        font-weight: 600;
+      }
+      .badge.no {
+        fill: var(--amber);
+        font-weight: 600;
+      }
+      .lock {
+        fill: var(--red);
+      }
+      .check {
+        fill: var(--green);
+        font-size: 16px;
+        font-weight: 700;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .check.show {
+        opacity: 1;
+      }
+      .counter-box {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #1c2033;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        color: var(--text-dim);
+        margin-top: 10px;
+      }
+      .counter-box b {
+        color: var(--green);
+        font-size: 14px;
+      }
+
+      /* ---- code + caption ---- */
+      pre#code {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+        font-family: var(--mono);
+        font-size: 12.5px;
+        line-height: 1.7;
+        overflow-x: auto;
+        margin: 0 0 18px;
+      }
+      .line {
+        padding: 2px 8px;
+        border-radius: 5px;
+        white-space: pre;
+        color: var(--text-dim);
+        transition: all 0.25s ease;
+      }
+      .line.active {
+        background: var(--accent-bg);
+        color: var(--accent);
+      }
+      .line.blocked-line {
+        background: var(--red-bg);
+        color: var(--red);
+      }
+      #caption {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        min-height: 22px;
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 18px;
+      }
+      #caption code {
+        background: #1c2033;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      #caption b {
+        color: var(--accent);
+      }
+
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      button {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      button:hover {
+        background: #1e2233;
+      }
+      button:active {
+        transform: scale(0.97);
+      }
+      #pos {
+        font-size: 13px;
+        color: var(--text-dim);
+      }
+      .spacer {
+        flex: 1;
+      }
+
+      .legend {
+        margin-top: 26px;
+        font-size: 12px;
+        color: var(--text-dim);
+        border-top: 1px solid var(--border);
+        padding-top: 14px;
+      }
+      .legend b {
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Singleton pattern — visual flow</h1>
+      <p class="subtitle">
+        Watch what happens across three separate calls to
+        <code>Singleton.getInstance()</code>.
+      </p>
+
+      <div class="diagram-shell">
+        <svg viewBox="0 0 700 440" xmlns="http://www.w3.org/2000/svg">
+          <!-- clients -->
+          <g id="clientA">
+            <rect
+              class="node-rect"
+              x="30"
+              y="20"
+              width="130"
+              height="40"
+              rx="8"
+            />
+            <text class="node-text" x="95" y="45" text-anchor="middle">
+              Client A
+            </text>
+          </g>
+          <g id="clientB">
+            <rect
+              class="node-rect"
+              x="285"
+              y="20"
+              width="130"
+              height="40"
+              rx="8"
+            />
+            <text class="node-text" x="350" y="45" text-anchor="middle">
+              Client B
+            </text>
+          </g>
+          <g id="clientC">
+            <rect
+              class="node-rect"
+              x="540"
+              y="20"
+              width="130"
+              height="40"
+              rx="8"
+            />
+            <text class="node-text" x="605" y="45" text-anchor="middle">
+              Client C
+            </text>
+          </g>
+          <text id="checkA" class="check" x="95" y="14" text-anchor="middle">
+            &#10003;
+          </text>
+          <text id="checkB" class="check" x="350" y="14" text-anchor="middle">
+            &#10003;
+          </text>
+          <text id="checkC" class="check" x="605" y="14" text-anchor="middle">
+            &#10003;
+          </text>
+
+          <!-- lines client -> getInstance -->
+          <path
+            id="lineA"
+            class="conn"
+            d="M95,60 L95,100 Q95,110 105,110 L270,110"
+            marker-end="url(#arrow)"
+          />
+          <path
+            id="lineB"
+            class="conn"
+            d="M350,60 L350,110"
+            marker-end="url(#arrow)"
+          />
+          <path
+            id="lineC"
+            class="conn"
+            d="M605,60 L605,110 Q605,110 595,110 L430,110"
+            marker-end="url(#arrow)"
+          />
+
+          <!-- blocked direct instantiation -->
+          <g id="blockedNew">
+            <rect
+              class="node-rect blocked"
+              x="30"
+              y="80"
+              width="150"
+              height="0"
+              rx="8"
+              opacity="0"
+            />
+          </g>
+
+          <!-- getInstance box -->
+          <g id="getInstanceBox">
+            <rect
+              class="node-rect"
+              x="270"
+              y="105"
+              width="160"
+              height="42"
+              rx="8"
+            />
+            <text class="node-text" x="350" y="130" text-anchor="middle">
+              getInstance()
+            </text>
+          </g>
+
+          <path class="conn" d="M350,147 L350,175" marker-end="url(#arrow)" />
+
+          <!-- decision diamond -->
+          <g id="decisionDiamond">
+            <polygon class="diamond" points="350,175 420,215 350,255 280,215" />
+            <text
+              class="node-text"
+              x="350"
+              y="211"
+              text-anchor="middle"
+              font-size="11"
+            >
+              instance ===
+            </text>
+            <text
+              class="node-text"
+              x="350"
+              y="224"
+              text-anchor="middle"
+              font-size="11"
+            >
+              null ?
+            </text>
+          </g>
+
+          <!-- yes branch to create -->
+          <path
+            id="yesPath"
+            class="conn"
+            d="M300,240 Q220,270 220,300"
+            marker-end="url(#arrow)"
+          />
+          <text id="yesLabel" class="badge" x="250" y="270">yes</text>
+
+          <!-- no branch straight down to instance slot -->
+          <path
+            id="noPath"
+            class="conn"
+            d="M350,255 L350,340"
+            marker-end="url(#arrow)"
+          />
+          <text id="noLabel" class="badge" x="358" y="290">no</text>
+
+          <!-- create box -->
+          <g id="createBox">
+            <rect
+              class="node-rect"
+              x="140"
+              y="300"
+              width="160"
+              height="42"
+              rx="8"
+            />
+            <text
+              class="node-text"
+              x="220"
+              y="325"
+              text-anchor="middle"
+              font-size="11"
+            >
+              new Singleton()
+            </text>
+          </g>
+          <path
+            id="createToSlot"
+            class="conn"
+            d="M220,342 Q220,370 280,380"
+            marker-end="url(#arrow)"
+          />
+
+          <!-- static instance slot -->
+          <g id="instanceSlot">
+            <rect
+              class="node-rect dashed"
+              x="280"
+              y="360"
+              width="180"
+              height="46"
+              rx="8"
+            />
+            <text
+              id="slotText"
+              class="node-text"
+              x="370"
+              y="387"
+              text-anchor="middle"
+              font-size="12"
+            >
+              Singleton.instance = null
+            </text>
+          </g>
+
+          <defs>
+            <marker
+              id="arrow"
+              viewBox="0 0 10 10"
+              refX="8"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
+              <path
+                d="M2 1L8 5L2 9"
+                fill="none"
+                stroke="#6b7185"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </marker>
+          </defs>
+        </svg>
+
+        <div class="counter-box">
+          Objects actually created: <b id="objCount">0</b>
+        </div>
+      </div>
+
+      <pre id="code"></pre>
+      <div id="caption"></div>
+
+      <div class="controls">
+        <button id="prev">&#8592; prev</button>
+        <button id="next">next &#8594;</button>
+        <span id="pos"></span>
+        <span class="spacer"></span>
+        <button id="play">&#9654; auto play</button>
+      </div>
+
+      <div class="legend">
+        <b>Compulsory:</b> a private static field to hold the one instance, a
+        private constructor (blocks outside <code>new</code>), a public static
+        access method that lazily creates it once.<br />
+        <b>Optional:</b> thread-safety locks (needed in multi-threaded
+        languages, not in single-threaded JS/TS), eager initialization instead
+        of lazy, using a module-level object instead of a class.
+      </div>
+    </div>
+
+    <script>
+      const codeLines = [
+        "class Singleton {",
+        "  private static instance: Singleton | null = null;",
+        "",
+        "  private constructor() {",
+        '    console.log("Singleton instance created");',
+        "  }",
+        "",
+        "  static getInstance(): Singleton {",
+        "    if (Singleton.instance === null) {",
+        "      Singleton.instance = new Singleton();",
+        "    }",
+        "    return Singleton.instance;",
+        "  }",
+        "}",
+        "",
+        "// outside code cannot do this:",
+        "// const x = new Singleton();  // Error: constructor is private",
+        "",
+        "const a = Singleton.getInstance();",
+        "const b = Singleton.getInstance();",
+        "const c = Singleton.getInstance();",
+        "",
+        "console.log(a === b, b === c); // true true",
+      ];
+
+      function resetDiagram() {
+        [
+          "clientA",
+          "clientB",
+          "clientC",
+          "getInstanceBox",
+          "decisionDiamond",
+          "createBox",
+        ].forEach((id) => {
+          const el = document.getElementById(id);
+          el.querySelector(".node-rect, .diamond")?.classList.remove(
+            "active",
+            "blocked",
+          );
+          el.querySelector(".node-text")?.classList.remove(
+            "active-text",
+            "filled-text",
+          );
+        });
+        [
+          "lineA",
+          "lineB",
+          "lineC",
+          "yesPath",
+          "noPath",
+          "createToSlot",
+        ].forEach((id) => {
+          document.getElementById(id).classList.remove("active", "yes", "no");
+        });
+        ["checkA", "checkB", "checkC"].forEach((id) =>
+          document.getElementById(id).classList.remove("show"),
+        );
+      }
+
+      const steps = [
+        {
+          lines: [0, 1, 3, 4, 5, 7],
+          diagram: () => {},
+          cap: "Class ke andar teen cheezein hain: <b>private static instance</b> (jo abhi tak null hai), <b>private constructor</b> (bahar se new nahi kar sakte), aur <b>getInstance()</b> jo control karta hai object kaise milega.",
+        },
+        {
+          lines: [16],
+          diagram: () => {
+            const el = document
+              .getElementById("blockedNew")
+              .querySelector("rect");
+            el.setAttribute("y", "80");
+            el.setAttribute("height", "30");
+            el.setAttribute("opacity", "1");
+            el.classList.add("blocked");
+          },
+          cap: "Koi bahar se <code>new Singleton()</code> karne ki koshish kare to <b style='color:#ff5f5f'>error</b> aayega — constructor private hai. Object sirf getInstance() se hi mil sakta hai.",
+        },
+        {
+          lines: [18],
+          diagram: () => {
+            document
+              .getElementById("clientA")
+              .querySelector(".node-rect")
+              .classList.add("active");
+            document.getElementById("lineA").classList.add("active");
+            document
+              .getElementById("getInstanceBox")
+              .querySelector(".node-rect")
+              .classList.add("active");
+          },
+          cap: "<b>Client A</b> sabse pehle <code>Singleton.getInstance()</code> call karta hai.",
+        },
+        {
+          lines: [8],
+          diagram: () => {
+            document
+              .getElementById("decisionDiamond")
+              .querySelector(".diamond")
+              .classList.add("active");
+          },
+          cap: "Andar check hota hai: <code>instance === null</code>? Ye pehli call hai, to abhi <b>true</b> hai.",
+        },
+        {
+          lines: [9],
+          diagram: () => {
+            document.getElementById("yesPath").classList.add("yes");
+            document
+              .getElementById("createBox")
+              .querySelector(".node-rect")
+              .classList.add("active");
+            document.getElementById("createToSlot").classList.add("active");
+            document
+              .getElementById("instanceSlot")
+              .querySelector("rect")
+              .classList.remove("dashed");
+            document
+              .getElementById("instanceSlot")
+              .querySelector("rect")
+              .classList.add("filled");
+            document.getElementById("slotText").textContent =
+              "Singleton.instance = obj#1";
+            document.getElementById("slotText").classList.add("filled-text");
+            document.getElementById("objCount").textContent = "1";
+          },
+          cap: "Yes branch: ek naya object banta hai <code>new Singleton()</code> se, aur turant static field <b>Singleton.instance</b> mein store ho jata hai. Ye sirf ek baar hota hai — poore program mein.",
+        },
+        {
+          lines: [11],
+          diagram: () => {
+            document.getElementById("checkA").classList.add("show");
+          },
+          cap: "Wahi object return hokar Client A ko mil jata hai. Client A ke paas ab <b>obj#1</b> ka reference hai.",
+        },
+        {
+          lines: [19],
+          diagram: () => {
+            document
+              .getElementById("clientB")
+              .querySelector(".node-rect")
+              .classList.add("active");
+            document.getElementById("lineB").classList.add("active");
+            document
+              .getElementById("getInstanceBox")
+              .querySelector(".node-rect")
+              .classList.add("active");
+            document
+              .getElementById("decisionDiamond")
+              .querySelector(".diamond")
+              .classList.add("active");
+          },
+          cap: "Ab <b>Client B</b> bhi <code>getInstance()</code> call karta hai. Andar wahi check chalta hai: <code>instance === null</code>?",
+        },
+        {
+          lines: [9],
+          diagram: () => {
+            document.getElementById("noPath").classList.add("no");
+            document.getElementById("checkB").classList.add("show");
+          },
+          cap: "Is baar <b>false</b> hai — instance already exist karta hai. To <code>new Singleton()</code> line skip ho jaati hai, aur seedha wahi purana <b>obj#1</b> Client B ko return ho jata hai. Objects created still <b>1</b> hi hai.",
+        },
+        {
+          lines: [20],
+          diagram: () => {
+            document
+              .getElementById("clientC")
+              .querySelector(".node-rect")
+              .classList.add("active");
+            document.getElementById("lineC").classList.add("active");
+            document
+              .getElementById("getInstanceBox")
+              .querySelector(".node-rect")
+              .classList.add("active");
+            document
+              .getElementById("decisionDiamond")
+              .querySelector(".diamond")
+              .classList.add("active");
+            document.getElementById("noPath").classList.add("no");
+            document.getElementById("checkC").classList.add("show");
+          },
+          cap: "<b>Client C</b> ke liye bhi wahi story repeat hoti hai — check false, koi naya object nahi banta, wahi <b>obj#1</b> mil jata hai.",
+        },
+        {
+          lines: [22],
+          diagram: () => {
+            ["checkA", "checkB", "checkC"].forEach((id) =>
+              document.getElementById(id).classList.add("show"),
+            );
+          },
+          cap: "Isiliye <code>a === b</code> aur <code>b === c</code> dono <b style='color:#3ecf8e'>true</b> hain — teenon variables ek hi single object ki taraf point kar rahe hain. Yahi Singleton pattern ka pura point hai: <b>poore application mein sirf ek instance</b>, chahe kitni baar bhi getInstance() call ho.",
+        },
+      ];
+
+      let i = 0;
+      const codeEl = document.getElementById("code");
+      const capEl = document.getElementById("caption");
+      const posEl = document.getElementById("pos");
+
+      codeEl.innerHTML = codeLines
+        .map(
+          (l, idx) =>
+            `<div class="line" id="ln${idx}">${(l || " ").replace(/</g, "&lt;")}</div>`,
+        )
+        .join("");
+
+      function render() {
+        resetDiagram();
+        document
+          .getElementById("blockedNew")
+          .querySelector("rect")
+          .setAttribute("opacity", "0");
+        const s = steps[i];
+        codeLines.forEach((_, idx) => {
+          const el = document.getElementById("ln" + idx);
+          el.classList.remove("active", "blocked-line");
+          if (s.lines.includes(idx)) {
+            el.classList.add(i === 1 ? "blocked-line" : "active");
+          }
+        });
+        s.diagram();
+        capEl.innerHTML = s.cap;
+        posEl.textContent = i + 1 + " / " + steps.length;
+      }
+
+      document.getElementById("prev").onclick = () => {
+        i = Math.max(0, i - 1);
+        stopPlay();
+        render();
+      };
+      document.getElementById("next").onclick = () => {
+        i = Math.min(steps.length - 1, i + 1);
+        stopPlay();
+        render();
+      };
+
+      let timer = null;
+      function stopPlay() {
+        if (timer) {
+          clearInterval(timer);
+          timer = null;
+          document.getElementById("play").innerHTML = "&#9654; auto play";
+        }
+      }
+      document.getElementById("play").onclick = () => {
+        if (timer) {
+          stopPlay();
+          return;
+        }
+        document.getElementById("play").innerHTML = "&#10074;&#10074; pause";
+        timer = setInterval(() => {
+          i = (i + 1) % steps.length;
+          render();
+        }, 2000);
+      };
+
+      render();
+    </script>
+  </body>
+</html>

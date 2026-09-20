@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Factory Method Pattern — Visual Flow</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #161925;
+    --border: #2a2e3f;
+    --text: #e6e6e6;
+    --text-dim: #9aa0b4;
+    --accent: #4f8cff;
+    --accent-bg: rgba(79,140,255,0.15);
+    --accent-border: #4f8cff;
+    --green: #3ecf8e;
+    --green-bg: rgba(62,207,142,0.15);
+    --red: #ff5f5f;
+    --red-bg: rgba(255,95,95,0.15);
+    --amber: #f2a623;
+    --amber-bg: rgba(242,166,35,0.15);
+    --mono: "Consolas", "Menlo", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 16px 60px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  .wrap { width: 100%; max-width: 820px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 36px 0 4px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin: 0 0 22px; }
+
+  .diagram-shell {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 18px;
+  }
+  svg { width: 100%; height: auto; display: block; }
+  .node-rect { fill: #1c2033; stroke: var(--border); stroke-width: 1; transition: all 0.3s ease; }
+  .node-rect.active { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 1.5; }
+  .node-rect.shared { stroke-dasharray: 0; }
+  .node-rect.filled { fill: var(--green-bg); stroke: var(--green); }
+  .node-rect.dup { fill: var(--red-bg); stroke: var(--red); }
+  .node-text { fill: var(--text-dim); font-size: 12px; transition: fill 0.3s ease; }
+  .node-text.active-text { fill: var(--accent); font-weight: 600; }
+  .sublabel { fill: var(--text-dim); font-size: 9.5px; }
+  .diamond { fill: #1c2033; stroke: var(--border); stroke-width: 1; transition: all 0.3s ease; }
+  .diamond.active { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 1.5; }
+  .conn { stroke: var(--border); stroke-width: 1.2; fill: none; }
+  .conn.active { stroke: var(--accent); stroke-width: 2; }
+  .conn.dispatch { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 5 3; }
+  .badge { font-size: 10px; fill: var(--text-dim); }
+  .badge.hot { fill: var(--amber); font-weight: 600; }
+  .counter-box {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #1c2033; border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 12px; font-size: 12px; color: var(--text-dim); margin-top: 10px;
+  }
+  .counter-box b { color: var(--accent); font-size: 13px; }
+
+  pre#code {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; font-family: var(--mono); font-size: 12.5px; line-height: 1.7;
+    overflow-x: auto; margin: 0 0 18px;
+  }
+  .line { padding: 2px 8px; border-radius: 5px; white-space: pre; color: var(--text-dim); transition: all 0.25s ease; }
+  .line.active { background: var(--accent-bg); color: var(--accent); }
+  #caption {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-height: 22px; font-size: 14px; line-height: 1.6; margin-bottom: 18px;
+  }
+  #caption code { background: #1c2033; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  #caption b { color: var(--accent); }
+
+  .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  button {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  button:hover { background: #1e2233; }
+  button:active { transform: scale(0.97); }
+  #pos { font-size: 13px; color: var(--text-dim); }
+  .spacer { flex: 1; }
+
+  .compare-intro { font-size: 13.5px; color: var(--text-dim); line-height: 1.6; margin: 6px 0 16px; }
+  .compare-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 680px) { .compare-grid { grid-template-columns: 1fr 1fr; } }
+  .compare-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; display: flex; flex-direction: column;
+  }
+  .compare-card.bad { border-color: rgba(255,95,95,0.4); }
+  .compare-card.good { border-color: rgba(62,207,142,0.4); }
+  .compare-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .compare-title.bad { color: var(--red); }
+  .compare-title.good { color: var(--green); }
+  .compare-card pre {
+    background: #10131d; border-radius: 8px; padding: 12px 14px; font-family: var(--mono);
+    font-size: 11.5px; line-height: 1.6; margin: 0 0 10px; overflow-x: auto;
+  }
+  .hl-bad { background: var(--red-bg); color: var(--red); display: block; border-radius: 4px; padding: 0 4px; }
+  .hl-good { background: var(--green-bg); color: var(--green); display: block; border-radius: 4px; padding: 0 4px; }
+  .compare-note { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+  .compare-note b { color: var(--text); }
+
+  .rule-box {
+    margin-top: 18px; background: var(--accent-bg); border: 1px solid var(--accent-border);
+    border-radius: 10px; padding: 14px 16px; font-size: 13px; line-height: 1.6;
+  }
+  .rule-box b { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Factory method pattern — visual flow</h1>
+  <p class="subtitle">Step through how <code>smsCreator.send("Hello")</code> actually runs, then see why the Creator is an abstract class and not an interface.</p>
+
+  <div class="diagram-shell">
+    <svg viewBox="0 0 700 420" xmlns="http://www.w3.org/2000/svg">
+      <!-- client -->
+      <g id="client">
+        <rect class="node-rect" x="20" y="20" width="150" height="42" rx="8"/>
+        <text class="node-text" x="95" y="46" text-anchor="middle">Client</text>
+      </g>
+      <path id="lineClientToCreator" class="conn" d="M170,41 L260,41" marker-end="url(#arrow)"/>
+
+      <!-- concrete creator -->
+      <g id="concreteCreator">
+        <rect class="node-rect" x="265" y="20" width="220" height="42" rx="8"/>
+        <text class="node-text" x="375" y="46" text-anchor="middle">SmsNotificationCreator</text>
+      </g>
+
+      <path class="conn" d="M375,62 L375,90" marker-end="url(#arrow)"/>
+
+      <!-- shared send() box (abstract class method) -->
+      <g id="sharedSend">
+        <rect class="node-rect shared" x="255" y="95" width="240" height="52" rx="8"/>
+        <text class="node-text" x="375" y="116" text-anchor="middle" font-size="12">send() — inherited</text>
+        <text class="sublabel" x="375" y="132" text-anchor="middle">written once in NotificationCreator</text>
+      </g>
+
+      <path class="conn" d="M375,147 L375,175" marker-end="url(#arrow)"/>
+
+      <!-- dispatch diamond -->
+      <g id="dispatchDiamond">
+        <polygon class="diamond" points="375,175 445,213 375,251 305,213"/>
+        <text class="node-text" x="375" y="208" text-anchor="middle" font-size="10.5">this.createNotification()</text>
+        <text class="node-text" x="375" y="221" text-anchor="middle" font-size="10.5">polymorphic call</text>
+      </g>
+
+      <!-- dispatch back down to concrete override -->
+      <path id="dispatchPath" class="conn dispatch" d="M340,240 Q200,290 200,320" marker-end="url(#arrow)"/>
+      <text class="badge hot" x="205" y="285">dispatches to override</text>
+
+      <!-- override box -->
+      <g id="overrideBox">
+        <rect class="node-rect" x="90" y="320" width="220" height="46" rx="8"/>
+        <text class="node-text" x="200" y="340" text-anchor="middle" font-size="11">SmsNotificationCreator.</text>
+        <text class="node-text" x="200" y="353" text-anchor="middle" font-size="11">createNotification()</text>
+      </g>
+
+      <path id="overrideToProduct" class="conn" d="M310,343 L390,343" marker-end="url(#arrow)"/>
+
+      <!-- product box -->
+      <g id="productBox">
+        <rect class="node-rect" x="395" y="320" width="150" height="46" rx="8"/>
+        <text class="node-text" x="470" y="340" text-anchor="middle" font-size="11">new Sms()</text>
+        <text class="sublabel" x="470" y="353" text-anchor="middle">a Send</text>
+      </g>
+
+      <!-- back up to shared send, then product.send() -->
+      <path id="returnPath" class="conn" d="M470,320 Q470,270 400,213" marker-end="url(#arrow)"/>
+
+      <g id="productSendBox">
+        <rect class="node-rect" x="530" y="175" width="150" height="76" rx="8"/>
+        <text class="node-text" x="605" y="200" text-anchor="middle" font-size="11">notification</text>
+        <text class="node-text" x="605" y="215" text-anchor="middle" font-size="11">.send(message)</text>
+        <text class="sublabel" x="605" y="235" text-anchor="middle">Sms.send() runs</text>
+      </g>
+      <path id="toProductSend" class="conn" d="M445,213 L530,213" marker-end="url(#arrow)"/>
+
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#6b7185" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+    </svg>
+    <div class="counter-box">Lines of <code>send()</code> logic written: <b id="sendLinesCount">1</b> (shared by every creator)</div>
+  </div>
+
+  <pre id="code"></pre>
+  <div id="caption"></div>
+
+  <div class="controls">
+    <button id="prev">&#8592; prev</button>
+    <button id="next">next &#8594;</button>
+    <span id="pos"></span>
+    <span class="spacer"></span>
+    <button id="play">&#9654; auto play</button>
+  </div>
+
+  <!-- =============== COMPARISON SECTION =============== -->
+  <h2>Why an abstract class instead of an interface?</h2>
+  <p class="compare-intro">
+    The Creator needs two things: a method every subclass <b>must define differently</b> (<code>createNotification()</code>),
+    and a method that behaves <b>exactly the same</b> for every subclass (<code>send()</code>).
+    An interface can only declare the first kind — it cannot hold real code. Only an abstract class can hold both.
+  </p>
+
+  <div class="compare-grid">
+    <div class="compare-card bad">
+      <div class="compare-title bad">&#10007; If Creator were an interface</div>
+      <pre>interface NotificationCreator {
+  createNotification(): Send;
+  send(message: string): void;
+}
+
+class SmsNotificationCreator
+  implements NotificationCreator {
+
+  createNotification(): Send {
+    return new Sms();
+  }
+
+<span class="hl-bad">  send(message: string): void {
+    const n = this.createNotification();
+    n.send(message);
+  }</span>
+}
+
+class EmailNotificationCreator
+  implements NotificationCreator {
+
+  createNotification(): Send {
+    return new Email();
+  }
+
+<span class="hl-bad">  send(message: string): void {
+    const n = this.createNotification();
+    n.send(message);
+  }</span>
+}</pre>
+      <div class="compare-note">
+        Interfaces only declare a <b>signature</b> — no method body allowed. So the exact same 3-line body
+        for <code>send()</code> has to be <b>copy-pasted into every single creator class</b>. Add a third
+        channel (WhatsApp) and you paste it a third time.
+      </div>
+    </div>
+
+    <div class="compare-card good">
+      <div class="compare-title good">&#10003; With an abstract class (what we use)</div>
+      <pre>abstract class NotificationCreator {
+
+  abstract createNotification(): Send;
+
+<span class="hl-good">  send(message: string): void {
+    const n = this.createNotification();
+    n.send(message);
+  }</span>
+}
+
+class SmsNotificationCreator
+  extends NotificationCreator {
+
+  createNotification(): Send {
+    return new Sms();
+  }
+}
+
+class EmailNotificationCreator
+  extends NotificationCreator {
+
+  createNotification(): Send {
+    return new Email();
+  }
+}</pre>
+      <div class="compare-note">
+        <code>send()</code> is written <b>once</b>, with a real body, inside the abstract class.
+        Every subclass inherits it for free and only has to fill in the one thing that actually
+        changes: <b>which product to create</b>.
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-box">
+    <b>General rule:</b> use an <b>interface</b> when classes only need to share a contract with zero shared code
+    (e.g. <code>Send</code> — Sms and Email have nothing in common except a method signature). Use an
+    <b>abstract class</b> when subclasses share some real, reusable behavior <i>and</i> some behavior that must
+    vary — that mix of "common code + one gap to fill in" is exactly the shape the factory method pattern needs.
+  </div>
+</div>
+
+<script>
+const codeLines = [
+"interface Send {",
+"  send(message: string): void;",
+"}",
+"",
+"class Sms implements Send {",
+"  send(message: string): void {",
+"    console.log(`${message} through SMS`);",
+"  }",
+"}",
+"",
+"abstract class NotificationCreator {",
+"  abstract createNotification(): Send;",
+"",
+"  send(message: string): void {",
+"    const notification = this.createNotification();",
+"    notification.send(message);",
+"  }",
+"}",
+"",
+"class SmsNotificationCreator extends NotificationCreator {",
+"  createNotification(): Send {",
+"    return new Sms();",
+"  }",
+"}",
+"",
+"const smsCreator = new SmsNotificationCreator();",
+"smsCreator.send(\"Hello\");"
+];
+
+function resetDiagram() {
+  ["client","concreteCreator","sharedSend","overrideBox","productBox","productSendBox"].forEach(id => {
+    document.getElementById(id).querySelector(".node-rect")?.classList.remove("active");
+  });
+  document.getElementById("dispatchDiamond").querySelector(".diamond").classList.remove("active");
+  ["lineClientToCreator","dispatchPath","overrideToProduct","returnPath","toProductSend"].forEach(id => {
+    document.getElementById(id).classList.remove("active");
+  });
+}
+
+const steps = [
+  {
+    lines: [0,1,2,4,5,6,7,8],
+    diagram: () => {},
+    cap: "Pehle products dekho: <code>Send</code> ek plain interface hai (sirf contract), <code>Sms</code> uska concrete implementation hai. Inme koi shared logic nahi chahiye, isliye interface kaafi hai."
+  },
+  {
+    lines: [10,11],
+    diagram: () => {
+      document.getElementById("sharedSend").querySelector(".node-rect").classList.add("active");
+    },
+    cap: "<b>NotificationCreator</b> abstract class hai. Isme <code>createNotification()</code> abstract hai (koi body nahi) — ye jaanbujh kar khaali chhoda gaya hai taaki har subclass apna version de sake."
+  },
+  {
+    lines: [13,14,15,16],
+    diagram: () => {
+      document.getElementById("sharedSend").querySelector(".node-rect").classList.add("active");
+    },
+    cap: "Lekin <code>send()</code> yahan <b>poori body ke saath</b> likha hai. Ye common logic hai jo har creator ke liye same rahega — isiliye abstract class mein ek hi baar likha gaya, interface mein aisa possible hi nahi."
+  },
+  {
+    lines: [19,20,21,22],
+    diagram: () => {
+      document.getElementById("overrideBox").querySelector(".node-rect").classList.add("active");
+    },
+    cap: "<b>SmsNotificationCreator</b> sirf <code>createNotification()</code> ko override karta hai — sirf wahi cheez jo actually differ karti hai. <code>send()</code> ko dobara likhne ki zaroorat nahi, wo inherit ho jata hai."
+  },
+  {
+    lines: [25],
+    diagram: () => {
+      document.getElementById("client").querySelector(".node-rect").classList.add("active");
+      document.getElementById("concreteCreator").querySelector(".node-rect").classList.add("active");
+      document.getElementById("lineClientToCreator").classList.add("active");
+    },
+    cap: "Client ek <b>SmsNotificationCreator</b> object banata hai."
+  },
+  {
+    lines: [26],
+    diagram: () => {
+      document.getElementById("client").querySelector(".node-rect").classList.add("active");
+      document.getElementById("sharedSend").querySelector(".node-rect").classList.add("active");
+    },
+    cap: "Client <code>.send(\"Hello\")</code> call karta hai. Ye call jaake seedha <b>inherited</b> (abstract class ke) <code>send()</code> mein lagti hai — SmsNotificationCreator ne isse override hi nahi kiya."
+  },
+  {
+    lines: [14],
+    diagram: () => {
+      document.getElementById("sharedSend").querySelector(".node-rect").classList.add("active");
+      document.getElementById("dispatchDiamond").querySelector(".diamond").classList.add("active");
+    },
+    cap: "Us shared <code>send()</code> ke andar <code>this.createNotification()</code> call hota hai. <code>this</code> yahan SmsNotificationCreator hai — is polymorphic call ki wajah se sahi override chuna jaata hai."
+  },
+  {
+    lines: [20,21,22],
+    diagram: () => {
+      document.getElementById("dispatchDiamond").querySelector(".diamond").classList.add("active");
+      document.getElementById("dispatchPath").classList.add("active");
+      document.getElementById("overrideBox").querySelector(".node-rect").classList.add("active");
+    },
+    cap: "Dispatch jaake <b>SmsNotificationCreator.createNotification()</b> pe girta hai — ye wahi factory method hai jo decide karta hai kaunsa object banega."
+  },
+  {
+    lines: [21],
+    diagram: () => {
+      document.getElementById("overrideBox").querySelector(".node-rect").classList.add("active");
+      document.getElementById("overrideToProduct").classList.add("active");
+      document.getElementById("productBox").querySelector(".node-rect").classList.add("active");
+    },
+    cap: "Ye <code>new Sms()</code> return karta hai — ek concrete product jo <code>Send</code> interface follow karta hai."
+  },
+  {
+    lines: [15,16],
+    diagram: () => {
+      document.getElementById("productBox").querySelector(".node-rect").classList.add("active");
+      document.getElementById("returnPath").classList.add("active");
+      document.getElementById("toProductSend").classList.add("active");
+      document.getElementById("productSendBox").querySelector(".node-rect").classList.add("active");
+    },
+    cap: "Wapas shared <code>send()</code> mein, <code>notification</code> variable ab Sms object hai. <code>notification.send(message)</code> call hota hai → Sms ka apna <code>send()</code> chalta hai → message print hota hai."
+  }
+];
+
+let i = 0;
+const codeEl = document.getElementById("code");
+const capEl = document.getElementById("caption");
+const posEl = document.getElementById("pos");
+
+codeEl.innerHTML = codeLines.map((l, idx) =>
+  `<div class="line" id="ln${idx}">${(l || " ").replace(/</g, "&lt;")}</div>`
+).join("");
+
+function render() {
+  resetDiagram();
+  const s = steps[i];
+  codeLines.forEach((_, idx) => {
+    document.getElementById("ln" + idx).classList.toggle("active", s.lines.includes(idx));
+  });
+  s.diagram();
+  capEl.innerHTML = s.cap;
+  posEl.textContent = (i + 1) + " / " + steps.length;
+}
+
+document.getElementById("prev").onclick = () => { i = Math.max(0, i - 1); stopPlay(); render(); };
+document.getElementById("next").onclick = () => { i = Math.min(steps.length - 1, i + 1); stopPlay(); render(); };
+
+let timer = null;
+function stopPlay() {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+    document.getElementById("play").innerHTML = "&#9654; auto play";
+  }
+}
+document.getElementById("play").onclick = () => {
+  if (timer) { stopPlay(); return; }
+  document.getElementById("play").innerHTML = "&#10074;&#10074; pause";
+  timer = setInterval(() => {
+    i = (i + 1) % steps.length;
+    render();
+  }, 2200);
+};
+
+render();
+</script>
+</body>
+</html>
